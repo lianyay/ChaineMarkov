@@ -1,0 +1,10 @@
+---
+config:
+   layout: elk
+   theme: mc
+   look: classic
+---
+
+flowchart LR
+A["{4,3,2,5,1}"]
+
