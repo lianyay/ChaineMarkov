@@ -23,6 +23,9 @@ double difference_matrix(t_matrix* M, t_matrix* N);
 void afficher_matrice(t_matrix* matrice);
 void liberer_matrice(t_matrix* matrice);
 t_matrix* subMatrix(t_matrix* matrix, t_partition* part, int compo_index);
+t_matrix* extractSquareSubMatrix(t_matrix* matrix, t_partition* part, int compo_index);
+int getPeriod(t_matrix* sub_matrix);
+int gcd(int *vals, int nbvals);
 /**
  * @brief Extract a submatrix corresponding to a specific component of a graph partition.
  *

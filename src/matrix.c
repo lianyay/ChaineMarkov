@@ -154,3 +154,103 @@ t_matrix* subMatrix(t_matrix* matrix, t_partition* part, int compo_index) {
 
     return result;
 }
+
+int gcd(int *vals, int nbvals) {
+    if (nbvals == 0) return 0;
+    int result = vals[0];
+    for (int i = 1; i < nbvals; i++) {
+        int a = result;
+        int b = vals[i];
+        while (b != 0) {
+            int temp = b;
+            b = a % b;
+            a = temp;  // THIS LINE WAS MISSING!
+        }
+        result = a;
+    }
+    return result;
+}
+
+int getPeriod(t_matrix* sub_matrix)  // Note: pointer, not struct by value
+{
+    int n = sub_matrix->lignes;  // Use your field name
+    int *periods = (int *)malloc(n * sizeof(int));
+    int period_count = 0;
+    
+    // Create matrices using YOUR functions
+    t_matrix* power_matrix = creer_matrice_valzeros(n, n);
+    t_matrix* temp_matrix = NULL;  // For multiplication result
+    
+    // Initialize power_matrix = sub_matrix
+    copie_matrice(sub_matrix, power_matrix);
+    
+    for (int cpt = 1; cpt <= n; cpt++)
+    {
+        // Check diagonal
+        int diag_nonzero = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (power_matrix->data[i][i] > 0.0)  // Use double, not float
+            {
+                diag_nonzero = 1;
+                break;  // Can break early
+            }
+        }
+        
+        if (diag_nonzero) {
+            periods[period_count] = cpt;
+            period_count++;
+        }
+        
+        // Compute next power: M^(cpt+1) = M^cpt × M^1
+        temp_matrix = multiplication_matrice(power_matrix, sub_matrix);
+        if (temp_matrix == NULL) {
+            // Handle error
+            liberer_matrice(power_matrix);
+            free(periods);
+            return -1;
+        }
+        
+        // Update power_matrix for next iteration
+        copie_matrice(temp_matrix, power_matrix);
+        liberer_matrice(temp_matrix);
+        temp_matrix = NULL;
+    }
+    
+    int period = gcd(periods, period_count);
+    
+    // Cleanup
+    liberer_matrice(power_matrix);
+    free(periods);
+    
+    return period;
+}
+
+
+// Extrait une sous-matrice carrée (lignes ET colonnes d'une classe)
+t_matrix* extractSquareSubMatrix(t_matrix* matrix, t_partition* part, int compo_index) {
+    if (matrix == NULL || part == NULL || compo_index < 0 || compo_index >= part->taille) {
+        printf("Erreur: Paramètres invalides\n");
+        return NULL;
+    }
+
+    t_classe* classe = &part->classes[compo_index];
+    int size = classe->taille;
+    
+    t_matrix* result = creer_matrice_valzeros(size, size);
+    
+    // Remplir la sous-matrice carrée
+    for (int i = 0; i < size; i++) {
+        int row_idx = classe->sommets[i] - 1;  // -1 pour indice C
+        for (int j = 0; j < size; j++) {
+            int col_idx = classe->sommets[j] - 1;
+            
+            if (row_idx >= 0 && row_idx < matrix->lignes && 
+                col_idx >= 0 && col_idx < matrix->cols) {
+                result->data[i][j] = matrix->data[row_idx][col_idx];
+            }
+        }
+    }
+    
+    return result;
+}

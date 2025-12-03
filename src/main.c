@@ -142,16 +142,43 @@ int main() {
         }
         printf("}\n");
 
+        // 1. Sous-matrice carrée pour calcul de période
+        t_matrix* square_sub_matrice = extractSquareSubMatrix(M, partition, compo_index);
+        
+        if (square_sub_matrice != NULL) {
+            printf("Sous-matrice CARREE %dx%d (pour calcul de periode):\n", 
+                   square_sub_matrice->lignes, square_sub_matrice->cols);
+            afficher_matrice(square_sub_matrice);
+            
+            // Calcul de la période
+            printf("Calcul de la periode pour cette classe...\n");
+            int period = getPeriod(square_sub_matrice);
+            if (period >= 0) {
+                printf("Periode de la classe C%d : %d\n", compo_index + 1, period);
+                
+                // Classification basée sur la période
+                if (period == 1) {
+                    printf("Classe C%d est APERIODIQUE\n", compo_index + 1);
+                } else {
+                    printf("Classe C%d est PERIODIQUE (periode = %d)\n", compo_index + 1, period);
+                }
+            } else {
+                printf("Erreur dans le calcul de la periode\n");
+            }
+            
+            liberer_matrice(square_sub_matrice);
+        }
+        
+        // 2. Sous-matrice originale (toutes lignes, colonnes de la classe)
         t_matrix* sous_matrice = subMatrix(M, partition, compo_index);
-
         if (sous_matrice != NULL) {
-            printf("Sous-matrice %dx%d:\n", sous_matrice->lignes, sous_matrice->cols);
+            printf("Sous-matrice ORIGINALE %dx%d (toutes lignes, colonnes de la classe):\n",
+                   sous_matrice->lignes, sous_matrice->cols);
             afficher_matrice(sous_matrice);
             liberer_matrice(sous_matrice);
         }
     }
     printf("\n");
-
 
     // Résultats convergence
     if (convergence_atteinte) {
@@ -172,13 +199,11 @@ int main() {
             }
         }
     } else {
-
         printf("Convergence non atteinte apres %d iterations\n", iterations);
         printf("Difference finale : %.6f > epsilon = %.3f\n", diff, epsilon);
     }
 
-
-    // Memoire libere
+    // Nettoyage mémoire
     for (int i = 0; i < g.nb_sommets; i++) {
         cell *current = g.tab_liste[i].head;
         while (current != NULL) {
@@ -188,6 +213,18 @@ int main() {
         }
     }
     free(g.tab_liste);
+    
+    // Libération mémoire additionnelle
+    free(corresp);
+    free(liens->links);
+    free(liens);
+    
+    // Libération des matrices
+    if (M2 != NULL) liberer_matrice(M2);
+    if (M3 != NULL) liberer_matrice(M3);
+    if (Mk != NULL) liberer_matrice(Mk);
+    if (Mk_prev != NULL) liberer_matrice(Mk_prev);
+    liberer_matrice(M);
 
     return 0;
 }
