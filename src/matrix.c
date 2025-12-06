@@ -62,20 +62,34 @@ void copie_matrice(t_matrix* src, t_matrix* dest){
 
 //Fonction permettant de multiplier deux matrices
 t_matrix* multiplication_matrice(t_matrix* M, t_matrix* N){
-  if (M->cols != N->lignes) {
-    printf("Attention : Matrice de dimension differentes\n");
-    return NULL;
-  }
-    // Création de notre matrice final
-  t_matrix* result = creer_matrice_valzeros(M->lignes, N->cols);
-  for (int i = 0; i < M->lignes; i++) { //i --> Ligne de M
-    for (int j = 0; j < N->cols; j++) { //j --> Ligne de N
-      for (int k = 0; k < M->cols; k++) { // k --> produit : ligne * colonne
-        result->data[i][j] += M->data[i][k] * N->data[k][j];
-      }
+    if (M == NULL || N == NULL) {
+        printf("Erreur: Une des matrices est NULL\n");
+        return NULL;
     }
-  }
-  return result;
+
+    if (M->cols != N->lignes) {
+        printf("Erreur de dimensions: impossible de multiplier (%dx%d) par (%dx%d)\n",
+               M->lignes, M->cols, N->lignes, N->cols);
+        printf("Le nombre de colonnes de la premiere (%d) doit etre egal au nombre de lignes de la seconde (%d)\n",
+               M->cols, N->lignes);
+        return NULL;
+    }
+
+    // Création de notre matrice finale
+    t_matrix* result = creer_matrice_valzeros(M->lignes, N->cols);
+
+    // Multiplication standard
+    for (int i = 0; i < M->lignes; i++) {
+        for (int j = 0; j < N->cols; j++) {
+            double sum = 0.0;
+            for (int k = 0; k < M->cols; k++) {
+                sum += M->data[i][k] * N->data[k][j];
+            }
+            result->data[i][j] = sum;
+        }
+    }
+
+    return result;
 }
 
 //Fonction qui calcul la somme des différences absolues
@@ -176,14 +190,14 @@ int getPeriod(t_matrix* sub_matrix)  // Note: pointer, not struct by value
     int n = sub_matrix->lignes;  // Use your field name
     int *periods = (int *)malloc(n * sizeof(int));
     int period_count = 0;
-    
+
     // Create matrices using YOUR functions
     t_matrix* power_matrix = creer_matrice_valzeros(n, n);
     t_matrix* temp_matrix = NULL;  // For multiplication result
-    
+
     // Initialize power_matrix = sub_matrix
     copie_matrice(sub_matrix, power_matrix);
-    
+
     for (int cpt = 1; cpt <= n; cpt++)
     {
         // Check diagonal
@@ -196,12 +210,12 @@ int getPeriod(t_matrix* sub_matrix)  // Note: pointer, not struct by value
                 break;  // Can break early
             }
         }
-        
+
         if (diag_nonzero) {
             periods[period_count] = cpt;
             period_count++;
         }
-        
+
         // Compute next power: M^(cpt+1) = M^cpt × M^1
         temp_matrix = multiplication_matrice(power_matrix, sub_matrix);
         if (temp_matrix == NULL) {
@@ -210,19 +224,19 @@ int getPeriod(t_matrix* sub_matrix)  // Note: pointer, not struct by value
             free(periods);
             return -1;
         }
-        
+
         // Update power_matrix for next iteration
         copie_matrice(temp_matrix, power_matrix);
         liberer_matrice(temp_matrix);
         temp_matrix = NULL;
     }
-    
+
     int period = gcd(periods, period_count);
-    
+
     // Cleanup
     liberer_matrice(power_matrix);
     free(periods);
-    
+
     return period;
 }
 
@@ -236,21 +250,23 @@ t_matrix* extractSquareSubMatrix(t_matrix* matrix, t_partition* part, int compo_
 
     t_classe* classe = &part->classes[compo_index];
     int size = classe->taille;
-    
+
     t_matrix* result = creer_matrice_valzeros(size, size);
-    
+
     // Remplir la sous-matrice carrée
     for (int i = 0; i < size; i++) {
         int row_idx = classe->sommets[i] - 1;  // -1 pour indice C
         for (int j = 0; j < size; j++) {
             int col_idx = classe->sommets[j] - 1;
-            
-            if (row_idx >= 0 && row_idx < matrix->lignes && 
+
+            if (row_idx >= 0 && row_idx < matrix->lignes &&
                 col_idx >= 0 && col_idx < matrix->cols) {
                 result->data[i][j] = matrix->data[row_idx][col_idx];
             }
         }
     }
-    
+
     return result;
 }
+
+
