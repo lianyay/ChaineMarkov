@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
+#include <math.h>
 #include "list.h"
 #include "hasse.h"
 #include "tarjan.h"
@@ -143,9 +144,7 @@ int main() {
     printf("=== Creation de la matrice de distribution initiale ===\n");
 
     int nb_etat = 0;
-    int etat_init = 1;  // Par défaut, utiliser l'état 1
-
-    printf("Combien d'etats initiaux (1 a %d) : ", g.nb_sommets);
+    printf("Combien d'etats initiaux voulez-vous saisir (1 a %d) : ", g.nb_sommets);
     scanf("%d", &nb_etat);
 
     // Limiter le nombre d'états initiaux
@@ -154,69 +153,117 @@ int main() {
         nb_etat = 1;
     }
 
-    // Créer un tableau pour stocker les états initiaux et leurs probabilités
+    // Créer un tableau pour stocker les états initiaux
     int* etats_init = (int*)malloc(nb_etat * sizeof(int));
-    double* probabilites = (double*)malloc(nb_etat * sizeof(double));
-    if (etats_init == NULL || probabilites == NULL) {
+    if (etats_init == NULL) {
         printf("Erreur d'allocation memoire!\n");
         return 1;
     }
 
-    // Demander les états initiaux et leurs probabilités
-    printf("\nEntrez les etats initiaux et leurs probabilites (la somme doit faire 1.0) :\n");
-    double somme_proba = 0.0;
-
+    // Demander les états initiaux
+    printf("\nEntrez les numeros des etats initiaux (1 a %d) :\n", g.nb_sommets);
     for (int i = 0; i < nb_etat; i++) {
-        printf("\n--- Etat initial %d ---\n", i + 1);
-
-        // Demander le numéro de l'état
-        printf("Numero de l'etat (1 a %d) : ", g.nb_sommets);
+        printf("Etat %d : ", i + 1);
         scanf("%d", &etats_init[i]);
 
-        // Validation de l'état
+        // Validation
         if (etats_init[i] < 1 || etats_init[i] > g.nb_sommets) {
             printf("Etat invalide! Utilisation de l'etat 1 par defaut.\n");
             etats_init[i] = 1;
         }
         etats_init[i]--;  // Convertir en index 0-based
-
-        // Demander la probabilité
-        printf("Probabilite pour l'etat %d : ", etats_init[i] + 1);
-        scanf("%lf", &probabilites[i]);
-
-        // Validation de la probabilité
-        if (probabilites[i] < 0.0) {
-            printf("Probabilite negative! Mise a 0.0.\n");
-            probabilites[i] = 0.0;
-        }
-
-        somme_proba += probabilites[i];
     }
 
-    // Vérifier que la somme des probabilités vaut 1
-    if (somme_proba != 1.0) {
-        printf("\nATTENTION : La somme des probabilites est %.6f (au lieu de 1.0)\n", somme_proba);
+    // Demander le type de distribution
+    printf("\n=== TYPE DE DISTRIBUTION ===\n");
+    printf("1. Distribution personnalisee (vous saisissez les probabilites)\n");
+    printf("2. Distribution uniforme (meme probabilite pour tous les etats)\n");
+    printf("3. Distribution aleatoire (probabilites generees aleatoirement)\n");
+    printf("\nVotre choix (1-3) : ");
 
-        if (somme_proba == 0.0) {
-            // Si tout est à 0, mettre une distribution uniforme
-            printf("Distribution uniforme appliquee.\n");
-            for (int i = 0; i < nb_etat; i++) {
-                probabilites[i] = 1.0 / nb_etat;
-            }
-        } else {
-            // Normaliser les probabilités
-            printf("Normalisation des probabilites...\n");
-            for (int i = 0; i < nb_etat; i++) {
-                probabilites[i] /= somme_proba;
-            }
-        }
+    int choix_distribution;
+    scanf("%d", &choix_distribution);
 
-        // Recalculer la somme
-        somme_proba = 0.0;
+    // Créer un tableau pour les probabilités
+    double* probabilites = (double*)malloc(nb_etat * sizeof(double));
+    if (probabilites == NULL) {
+        printf("Erreur d'allocation memoire!\n");
+        free(etats_init);
+        return 1;
+    }
+
+    // Gérer le type de distribution choisi
+    if (choix_distribution == 1) {
+        // Distribution personnalisée
+        printf("\nEntrez les probabilites pour chaque etat (la somme doit faire 1.0) :\n");
+        double somme_proba = 0.0;
+
         for (int i = 0; i < nb_etat; i++) {
+            printf("Probabilite pour l'etat %d : ", etats_init[i] + 1);
+            scanf("%lf", &probabilites[i]);
+
+            if (probabilites[i] < 0.0) {
+                printf("Probabilite negative! Mise a 0.0.\n");
+                probabilites[i] = 0.0;
+            }
+
             somme_proba += probabilites[i];
         }
-        printf("Nouvelle somme : %.6f\n", somme_proba);
+
+        // Normaliser si nécessaire
+        if (fabs(somme_proba - 1.0) > 0.0001) {
+            printf("\nATTENTION : La somme des probabilites est %.6f (au lieu de 1.0)\n", somme_proba);
+
+            if (somme_proba == 0.0) {
+                // Si tout est à 0, mettre une distribution uniforme
+                printf("Distribution uniforme appliquee.\n");
+                for (int i = 0; i < nb_etat; i++) {
+                    probabilites[i] = 1.0 / nb_etat;
+                }
+            } else {
+                // Normaliser les probabilités
+                printf("Normalisation des probabilites...\n");
+                for (int i = 0; i < nb_etat; i++) {
+                    probabilites[i] /= somme_proba;
+                }
+            }
+        }
+
+    } else if (choix_distribution == 2) {
+        // Distribution uniforme
+        double proba_uniforme = 1.0 / nb_etat;
+        for (int i = 0; i < nb_etat; i++) {
+            probabilites[i] = proba_uniforme;
+        }
+        printf("\nDistribution uniforme appliquee : probabilite = %.4f pour chaque etat\n", proba_uniforme);
+
+    } else if (choix_distribution == 3) {
+        // Distribution aléatoire
+        printf("\nGenerer une distribution aleatoire...\n");
+
+        // Initialiser le générateur de nombres aléatoires
+        srand(time(NULL));
+        double somme_proba = 0.0;
+
+        // Générer des nombres aléatoires
+        for (int i = 0; i < nb_etat; i++) {
+            probabilites[i] = (double)(rand() % 1000 + 1) / 1000.0;  // Valeurs entre 0.001 et 1.000
+            somme_proba += probabilites[i];
+        }
+
+        // Normaliser pour que la somme fasse 1
+        for (int i = 0; i < nb_etat; i++) {
+            probabilites[i] /= somme_proba;
+        }
+
+        printf("Distribution aleatoire generee et normalisee.\n");
+
+    } else {
+        printf("Choix invalide! Utilisation de la distribution uniforme par defaut.\n");
+        double proba_uniforme = 1.0 / nb_etat;
+        for (int i = 0; i < nb_etat; i++) {
+            probabilites[i] = proba_uniforme;
+        }
     }
 
     // Créer un VECTEUR LIGNE (1 x nb_sommets)
@@ -227,9 +274,6 @@ int main() {
         mat_init->data[0][etats_init[i]] = probabilites[i];
     }
 
-    // Utiliser le premier état pour l'affichage détaillé
-    etat_init = etats_init[0] + 1;  // Convertir en 1-based pour l'affichage
-
     // Afficher le récapitulatif
     printf("\n================ RECAPITULATIF ================\n");
     printf("Etats initiaux et leurs probabilites :\n");
@@ -237,7 +281,13 @@ int main() {
         printf("  Etat %d : probabilite = %.4f\n",
                etats_init[i] + 1, probabilites[i]);
     }
-    printf("Somme totale : %.6f\n", somme_proba);
+
+    // Vérifier la somme
+    double somme_finale = 0.0;
+    for (int i = 0; i < nb_etat; i++) {
+        somme_finale += probabilites[i];
+    }
+    printf("Somme totale : %.6f\n", somme_finale);
 
     printf("\nDistribution initiale complete (vecteur ligne 1x%d):\n[ ", g.nb_sommets);
     for (int i = 0; i < g.nb_sommets; i++) {
@@ -333,7 +383,7 @@ int main() {
     // ====== PARTIE 3 : Multiplication distribution initiale × M^n ======
     printf("=== Calcul de la distribution apres %d transitions ===\n", n);
     printf("Distribution_finale = Distribution_initiale × M^%d\n", n);
-    printf("(Avec la distribution initiale personnalisee)\n");
+    printf("(Avec la distribution initiale configuree)\n");
 
     // Vérifier la compatibilité des dimensions
     printf("Dimensions: mat_init = %dx%d, M^%d = %dx%d\n",
@@ -346,7 +396,7 @@ int main() {
         printf("Erreur : Impossible de multiplier les matrices\n");
     } else {
         printf("\nDistribution de probabilite apres %d transitions :\n", n);
-        printf("(A partir de la distribution initiale personnalisee)\n");
+        printf("(A partir de la distribution initiale configuree)\n");
         printf("=====================================================\n");
 
         // Calculer la somme des probabilités
