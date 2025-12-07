@@ -37,7 +37,7 @@ void afficherFichiersDisponibles() {
                 strstr(nom_base, "_hasse") == NULL) {
                 printf("- %s\n", nom_base);
                 count++;
-                }
+            }
         }
     }
 
@@ -50,7 +50,6 @@ void afficherFichiersDisponibles() {
         printf("Total : %d fichier(s) disponible(s)\n\n", count);
     }
 }
-
 
 int main() {
     // Afficher d'abord tous les fichiers disponibles
@@ -105,7 +104,7 @@ int main() {
     sprintf(mermaidFile, "../data/%s_mermaid.txt", input);
     genererFichierMermaid(g, mermaidFile);
 
-    //On commence la partie 2 - Algorithme de tarjan + diagramme de hasse
+    // On commence la partie 2 - Algorithme de tarjan + diagramme de hasse
     // Affiche l'algo de tarjan
     t_partition *partition = tarjan_calculer_partition(g);
     printf("\n");
@@ -120,7 +119,7 @@ int main() {
     }
     printf("\n");
 
-    //Affiche les caractétistiques complètes du graphe
+    // Affiche les caractéristiques complètes du graphe
     analyserCarac(partition, &g);
     printf("\n");
 
@@ -143,27 +142,116 @@ int main() {
     // ====== PARTIE 1 : Création de la matrice de distribution initiale ======
     printf("=== Creation de la matrice de distribution initiale ===\n");
 
-    int etat_init = 0;
-    printf("Entrez l'etat initial (1 a %d) : ", g.nb_sommets);
-    scanf("%d", &etat_init);
+    int nb_etat = 0;
+    int etat_init = 1;  // Par défaut, utiliser l'état 1
 
-    // Vérifier que l'état est valide
-    if (etat_init < 1 || etat_init > g.nb_sommets) {
-        printf("Etat invalide! Utilisation de l'etat 1 par defaut.\n");
-        etat_init = 1;
+    printf("Combien d'etats initiaux (1 a %d) : ", g.nb_sommets);
+    scanf("%d", &nb_etat);
+
+    // Limiter le nombre d'états initiaux
+    if (nb_etat < 1 || nb_etat > g.nb_sommets) {
+        printf("Nombre d'etats invalide! Utilisation d'un seul etat par defaut.\n");
+        nb_etat = 1;
+    }
+
+    // Créer un tableau pour stocker les états initiaux et leurs probabilités
+    int* etats_init = (int*)malloc(nb_etat * sizeof(int));
+    double* probabilites = (double*)malloc(nb_etat * sizeof(double));
+    if (etats_init == NULL || probabilites == NULL) {
+        printf("Erreur d'allocation memoire!\n");
+        return 1;
+    }
+
+    // Demander les états initiaux et leurs probabilités
+    printf("\nEntrez les etats initiaux et leurs probabilites (la somme doit faire 1.0) :\n");
+    double somme_proba = 0.0;
+
+    for (int i = 0; i < nb_etat; i++) {
+        printf("\n--- Etat initial %d ---\n", i + 1);
+
+        // Demander le numéro de l'état
+        printf("Numero de l'etat (1 a %d) : ", g.nb_sommets);
+        scanf("%d", &etats_init[i]);
+
+        // Validation de l'état
+        if (etats_init[i] < 1 || etats_init[i] > g.nb_sommets) {
+            printf("Etat invalide! Utilisation de l'etat 1 par defaut.\n");
+            etats_init[i] = 1;
+        }
+        etats_init[i]--;  // Convertir en index 0-based
+
+        // Demander la probabilité
+        printf("Probabilite pour l'etat %d : ", etats_init[i] + 1);
+        scanf("%lf", &probabilites[i]);
+
+        // Validation de la probabilité
+        if (probabilites[i] < 0.0) {
+            printf("Probabilite negative! Mise a 0.0.\n");
+            probabilites[i] = 0.0;
+        }
+
+        somme_proba += probabilites[i];
+    }
+
+    // Vérifier que la somme des probabilités vaut 1
+    if (somme_proba != 1.0) {
+        printf("\nATTENTION : La somme des probabilites est %.6f (au lieu de 1.0)\n", somme_proba);
+
+        if (somme_proba == 0.0) {
+            // Si tout est à 0, mettre une distribution uniforme
+            printf("Distribution uniforme appliquee.\n");
+            for (int i = 0; i < nb_etat; i++) {
+                probabilites[i] = 1.0 / nb_etat;
+            }
+        } else {
+            // Normaliser les probabilités
+            printf("Normalisation des probabilites...\n");
+            for (int i = 0; i < nb_etat; i++) {
+                probabilites[i] /= somme_proba;
+            }
+        }
+
+        // Recalculer la somme
+        somme_proba = 0.0;
+        for (int i = 0; i < nb_etat; i++) {
+            somme_proba += probabilites[i];
+        }
+        printf("Nouvelle somme : %.6f\n", somme_proba);
     }
 
     // Créer un VECTEUR LIGNE (1 x nb_sommets)
     t_matrix* mat_init = creer_matrice_valzeros(1, g.nb_sommets);
 
-    // data[0][colonne] pour un vecteur ligne
-    mat_init->data[0][etat_init - 1] = 1.0;
-
-    printf("Distribution initiale (vecteur ligne 1x%d): ", g.nb_sommets);
-    for (int i = 0; i < g.nb_sommets; i++) {
-        printf("%.1f ", mat_init->data[0][i]);
+    // Remplir avec les probabilités spécifiées
+    for (int i = 0; i < nb_etat; i++) {
+        mat_init->data[0][etats_init[i]] = probabilites[i];
     }
-    printf("\n\n");
+
+    // Utiliser le premier état pour l'affichage détaillé
+    etat_init = etats_init[0] + 1;  // Convertir en 1-based pour l'affichage
+
+    // Afficher le récapitulatif
+    printf("\n================ RECAPITULATIF ================\n");
+    printf("Etats initiaux et leurs probabilites :\n");
+    for (int i = 0; i < nb_etat; i++) {
+        printf("  Etat %d : probabilite = %.4f\n",
+               etats_init[i] + 1, probabilites[i]);
+    }
+    printf("Somme totale : %.6f\n", somme_proba);
+
+    printf("\nDistribution initiale complete (vecteur ligne 1x%d):\n[ ", g.nb_sommets);
+    for (int i = 0; i < g.nb_sommets; i++) {
+        printf("%.4f", mat_init->data[0][i]);
+        if (i < g.nb_sommets - 1) printf(", ");
+        if ((i + 1) % 8 == 0 && i < g.nb_sommets - 1) {
+            printf("\n  ");
+        }
+    }
+    printf(" ]\n\n");
+
+    // Libérer les tableaux temporaires
+    free(etats_init);
+    free(probabilites);
 
     // ====== PARTIE 2 : Calcul de la puissance de M ======
     int n = 0;
@@ -245,7 +333,7 @@ int main() {
     // ====== PARTIE 3 : Multiplication distribution initiale × M^n ======
     printf("=== Calcul de la distribution apres %d transitions ===\n", n);
     printf("Distribution_finale = Distribution_initiale × M^%d\n", n);
-    printf("(Ou Distribution_initiale est le vecteur e_%d)\n", etat_init);
+    printf("(Avec la distribution initiale personnalisee)\n");
 
     // Vérifier la compatibilité des dimensions
     printf("Dimensions: mat_init = %dx%d, M^%d = %dx%d\n",
@@ -258,7 +346,7 @@ int main() {
         printf("Erreur : Impossible de multiplier les matrices\n");
     } else {
         printf("\nDistribution de probabilite apres %d transitions :\n", n);
-        printf("(En partant de l'etat %d)\n", etat_init);
+        printf("(A partir de la distribution initiale personnalisee)\n");
         printf("=====================================================\n");
 
         // Calculer la somme des probabilités
@@ -288,8 +376,7 @@ int main() {
                etat_max + 1, proba_max, proba_max * 100);
 
         // 3. Les états accessibles
-        printf("\n2. Etats accessibles depuis l'etat %d en %d transitions :\n",
-               etat_init, n);
+        printf("\n2. Etats accessibles (avec probabilite > 0.000001) :\n");
         int nb_accessibles = 0;
         for (int i = 0; i < distribution_finale->cols; i++) {
             if (distribution_finale->data[0][i] > 0.000001) {
@@ -330,7 +417,7 @@ int main() {
 
     t_matrix* Mk = creer_matrice_valzeros(g.nb_sommets, g.nb_sommets);
     t_matrix* Mk_prev = creer_matrice_valzeros(g.nb_sommets, g.nb_sommets);
-    t_matrix* temp = NULL;  // Ajout d'une variable temporaire
+    t_matrix* temp = NULL;
 
     // Initialiser Mk avec M
     copie_matrice(M, Mk);
@@ -350,8 +437,8 @@ int main() {
             printf("Erreur dans la multiplication matricielle\n");
             break;
         }
-        copie_matrice(temp, Mk);
-        liberer_matrice(temp);  // IMPORTANT: libérer la matrice temporaire
+        liberer_matrice(Mk);
+        Mk = temp;
         temp = NULL;
 
         diff = difference_matrix(Mk, Mk_prev);
@@ -468,8 +555,8 @@ int main() {
         liberer_matrice(temp);
     }
 
-    if (Mk != NULL) liberer_matrice(Mk);
-    if (Mk_prev != NULL) liberer_matrice(Mk_prev);
+    liberer_matrice(Mk);
+    liberer_matrice(Mk_prev);
     liberer_matrice(M);
 
     return 0;

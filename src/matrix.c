@@ -126,7 +126,7 @@ void liberer_matrice(t_matrix* matrice) {
         return;
     }
 
-    printf("Liberation d'une matrice %dx%d\n", matrice->lignes, matrice->cols);
+    //printf("Liberation d'une matrice %dx%d\n", matrice->lignes, matrice->cols);
 
     for (int i = 0; i < matrice->lignes; i++) {
         free(matrice->data[i]);
